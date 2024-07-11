@@ -21,6 +21,7 @@ class Move:
 
 
 class GomokuCell:
+
     def __init__(self):
         self._current_player: PlayerEnum | None = None
 
@@ -33,6 +34,7 @@ class GomokuCell:
 
 
 class GomokuBoard:
+
     def __init__(self, w_size: int = 15, h_size: int = 15):
         self._w_size = w_size
         self._h_size = h_size
@@ -48,12 +50,10 @@ class GomokuBoard:
         return self._w_size, self._h_size
 
     def _check_valid_move(self, move: Move):
-        assert (
-            0 <= move.position_x <= self._w_size
-        ), f"Move x-value must be between 0 and {self._w_size}, got {move.position_x}"
-        assert (
-            0 <= move.position_y <= self._h_size
-        ), f"Move y-value must be between 0 and {self._h_size}, got {move.position_y}"
+        assert (0 <= move.position_x <=
+                self._w_size), f"Move x-value must be between 0 and {self._w_size}, got {move.position_x}"
+        assert (0 <= move.position_y <=
+                self._h_size), f"Move y-value must be between 0 and {self._h_size}, got {move.position_y}"
         assert self._board[move.position_x][move.position_y].get_player() is None, "Cell is already occupied"
 
     def make_move(self, move: Move):
@@ -93,7 +93,7 @@ class GomokuBoard:
 if __name__ == "__main__":
     board = GomokuBoard()
     move = Move(PlayerEnum.BLACK, 5, 5)
-    board.make_move(move)  # No assertion error
+    board.make_move(move)    # No assertion error
     print(f"size, {board.size}")
     print(f"empty move, {board[1,1].get_player()}")
     print(f"move, {board[5,5].get_player()}")

@@ -2,9 +2,9 @@
 .PHONY: venv install sync upgrade pre-commit check clean
 
 GLOBAL_PYTHON=${python}
-LOCAL_PYTHON=~/code/venv/bin/python
-LOCAL_PIP_COMPILE=~/code/venv/bin/pip-compile
-LOCAL_PIP_SYNC=~/code/venv/bin/pip-sync
+LOCAL_PYTHON=~/code/research/research-ml/.venv/bin/python
+LOCAL_PIP_COMPILE=~/code/research/research-ml/.venv/bin/pip-compile
+LOCAL_PIP_SYNC=~/code/research/research-ml/.venv/bin/pip-sync
 
 venv: ${GLOBAL_PYTHON}
 	@echo "Creating virtual environment..."
@@ -16,8 +16,8 @@ install: $(LOCAL_PYTHON)
 	@echo "Installing dependencies..."
 	$(LOCAL_PYTHON) -m pip install --upgrade pip
 	$(LOCAL_PYTHON) -m pip install pip-tools
-	$(LOCAL_PIP_COMPILE) pyproject.toml --output-file requirements.txt --resolver=backtracking --allow-unsafe
-	$(LOCAL_PIP_COMPILE) pyproject.toml --output-file requirements-dev.txt --resolver=backtracking --allow-unsafe --extra dev
+	$(LOCAL_PIP_COMPILE) --output-file requirements.txt --resolver=backtracking --allow-unsafe
+	$(LOCAL_PIP_COMPILE) --output-file requirements-dev.txt --resolver=backtracking --allow-unsafe --extra dev
 	@echo "Dependencies installed. Syncing..."
 	$(LOCAL_PIP_SYNC) requirements-dev.txt --pip-args="--no-cache-dir"
 	@echo "Dependencies done syncing."

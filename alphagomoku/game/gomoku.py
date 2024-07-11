@@ -13,12 +13,13 @@ class GomokuGameData:
 
 
 class GomokuGame:
+
     def __init__(self):
         self.game_data: GomokuGameData = GomokuGameData()
         self.board: GomokuBoard = GomokuBoard()
         self.starting_rule: StartingRule = StartingRule.BASIC
-        self.current_player: PlayerEnum = PlayerEnum.BLACK  # Black starts by default
-        self.rule_stage: int = 0  # To track stages in Swap and Swap2 rules
+        self.current_player: PlayerEnum = PlayerEnum.BLACK    # Black starts by default
+        self.rule_stage: int = 0    # To track stages in Swap and Swap2 rules
 
     def make_move(self, move: Move) -> bool:
         """Make a move on the board."""
@@ -36,8 +37,8 @@ class GomokuGame:
     def replay_game(self, game_json):
         """Reproduce the moves from a JSON string."""
         self.moves = json.loads(game_json)
-        self.board = GomokuBoard()  # Reset the board
-        self.winner = None  # Reset the winner
+        self.board = GomokuBoard()    # Reset the board
+        self.winner = None    # Reset the winner
 
         for move in self.moves:
             player = move.player
@@ -47,7 +48,8 @@ class GomokuGame:
             if self.check_winner(player, x, y):
                 self.winner = player
 
-    def display_board(self): ...
+    def display_board(self):
+        ...
 
     def check_winner(self, last_move: Move) -> bool:
         """Check if the player has won the game after placing a stone at (x, y)."""
@@ -86,9 +88,9 @@ class GomokuGame:
         if rule_name not in ["Swap", "Swap2"]:
             raise ValueError("Invalid rule name. Choose 'Swap' or 'Swap2'.")
         self.current_rule = rule_name
-        self.rule_stage = 1  # Start the rule-specific move stages
+        self.rule_stage = 1    # Start the rule-specific move stages
         self.moves = []
-        self.board = [[None for _ in range(15)] for _ in range(15)]  # Reset the board
+        self.board = [[None for _ in range(15)] for _ in range(15)]    # Reset the board
         self.winner = None
 
     def apply_rule_move(self, player, x, y):
@@ -105,8 +107,8 @@ class GomokuGame:
                     self.rule_stage += 1
             elif self.rule_stage == 3:
                 if self.make_move("O", x, y):
-                    self.rule_stage = 4  # Swap rule completed
-                    self.current_player = "O"  # Player 2 chooses their color
+                    self.rule_stage = 4    # Swap rule completed
+                    self.current_player = "O"    # Player 2 chooses their color
             else:
                 return self.make_move(player, x, y)
 
@@ -122,8 +124,8 @@ class GomokuGame:
                     self.rule_stage += 1
             elif self.rule_stage == 4:
                 if self.make_move("O", x, y):
-                    self.rule_stage = 5  # Swap2 rule completed
-                    self.current_player = "X"  # Player 1 chooses their color
+                    self.rule_stage = 5    # Swap2 rule completed
+                    self.current_player = "X"    # Player 1 chooses their color
             else:
                 return self.make_move(player, x, y)
 

@@ -1,9 +1,4 @@
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.5.1'
-    hooks:
-      - id: ruff
-        args: [ --fix, --exit-non-zero-on-fix ]
   - repo: https://github.com/PyCQA/isort
     rev: '5.13.2'
     hooks:
@@ -13,9 +8,9 @@ repos:
     rev: '7.4.1'
     hooks:
       - id: pip-compile
-        name: pip-compile pyproject.toml
-        args: [ 'pyproject.toml', '--allow-unsafe', '--resolver=backtracking' ]
-        files: ^(pyproject\.toml|requirements\.txt)$
+        name: pip-compile
+        args: ['--allow-unsafe', '--resolver=backtracking' ]
+        files: ^(requirements\.txt)$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 'v4.6.0'
     hooks:
