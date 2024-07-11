@@ -173,6 +173,7 @@ cython_debug/
 
 # Ignore logs
 **/*.log
+**/*.txt
 
 # Ignore wandb files
 wandb/
