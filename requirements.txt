@@ -18,6 +18,8 @@ charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via wandb
+cloudpickle==3.0.0
+    # via gymnasium
 contourpy==1.2.1
     # via matplotlib
 cycler==0.12.1
@@ -26,6 +28,8 @@ debugpy==1.8.2
     # via alphagomoku (setup.py)
 docker-pycreds==0.4.0
     # via wandb
+farama-notifications==0.0.4
+    # via gymnasium
 filelock==3.15.4
     # via torch
 fonttools==4.53.1
@@ -42,6 +46,8 @@ gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
     # via wandb
+gymnasium==0.29.1
+    # via alphagomoku (setup.py)
 idna==3.7
     # via
     #   requests
@@ -74,6 +80,7 @@ numpy==2.0.0
     # via
     #   alphagomoku (setup.py)
     #   contourpy
+    #   gymnasium
     #   matplotlib
     #   pandas
     #   pytorch-lightning
@@ -183,6 +190,7 @@ tqdm==4.66.4
     # via pytorch-lightning
 typing-extensions==4.12.2
     # via
+    #   gymnasium
     #   lightning-utilities
     #   pytorch-lightning
     #   torch

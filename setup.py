@@ -7,6 +7,7 @@ setup(
     package_dir={"": "alphagomoku"},
     install_requires=[
         "debugpy",
+        "gymnasium",
         "matplotlib",
         "numpy",
         "pandas",
