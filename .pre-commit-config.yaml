@@ -4,6 +4,11 @@ repos:
     hooks:
       - id: isort
         args: [ '--profile=black' ]
+  - repo: https://github.com/google/yapf
+    rev: v0.31.0
+    hooks:
+      - id: yapf
+        name: "yapf"
   - repo: https://github.com/jazzband/pip-tools
     rev: '7.4.1'
     hooks:
