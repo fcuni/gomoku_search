@@ -27,6 +27,13 @@ class Move:
     player: PlayerEnum
     position: GridPosition
 
+    def to_dict(self):
+        return {"player": self.player.value, "position": self.position()}
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(PlayerEnum(data["player"]), GridPosition(*data["position"]))
+
 
 class GomokuCell:
 
@@ -72,9 +79,7 @@ class GomokuBoard:
         board_str = ""
 
         def cell_repr(cell: GomokuCell):
-            if cell.get_player() is None:
-                return " "
-            return cell.get_player().value
+            return " " if not cell.get_player() else cell.get_player().value
 
         horizontal_line = "=" * (17 * 4)
         column_numbers = "   " + "".join(f" {i:2} " for i in range(15))
@@ -94,15 +99,3 @@ class GomokuBoard:
     def store_board(self, file_path: str):
         with open(file_path, "w") as f:
             f.write(self._get_board_state_string())
-
-
-if __name__ == "__main__":
-    board = GomokuBoard()
-    dummy_move = Move(PlayerEnum.BLACK, GridPosition(1, 1))
-    move = Move(PlayerEnum.BLACK, GridPosition(5, 5))
-    board.make_move(move)    # No assertion error
-    print(f"size, {board.size}")
-    print(f"empty move, {board[GridPosition(1,1)].get_player()}")
-    print(f"move, {board[move.position].get_player()}")
-    board.display_board()
-    board.store_board("gomoku_board.txt")
