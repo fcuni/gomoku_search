@@ -14,10 +14,18 @@ class StartingRule(Enum):
 
 
 @dataclass
+class GridPosition:
+    x: int
+    y: int
+
+    def __call__(self):
+        return self.x, self.y
+
+
+@dataclass
 class Move:
     player: PlayerEnum
-    position_x: int
-    position_y: int
+    position: GridPosition
 
 
 class GomokuCell:
@@ -40,9 +48,8 @@ class GomokuBoard:
         self._h_size = h_size
         self._board: list[list[GomokuCell]] = [[GomokuCell() for _ in range(self._w_size)] for _ in range(self._h_size)]
 
-    def __getitem__(self, key):
-        assert isinstance(key, tuple) and len(key) == 2, "Key must be a tuple of two integers"
-        pos_x, pos_y = key
+    def __getitem__(self, position: GridPosition) -> GomokuCell:
+        pos_x, pos_y = position()
         return self._board[pos_x][pos_y]
 
     @property
@@ -50,15 +57,14 @@ class GomokuBoard:
         return self._w_size, self._h_size
 
     def _check_valid_move(self, move: Move):
-        assert (0 <= move.position_x <=
-                self._w_size), f"Move x-value must be between 0 and {self._w_size}, got {move.position_x}"
-        assert (0 <= move.position_y <=
-                self._h_size), f"Move y-value must be between 0 and {self._h_size}, got {move.position_y}"
-        assert self._board[move.position_x][move.position_y].get_player() is None, "Cell is already occupied"
+        position_x, position_y = move.position()
+        assert (0 <= position_x <= self._w_size), f"Move x-value must be between 0 and {self._w_size}, got {position_x}"
+        assert (0 <= position_y <= self._h_size), f"Move y-value must be between 0 and {self._h_size}, got {position_y}"
+        assert self[move.position].get_player() is None, "Cell is already occupied"
 
     def make_move(self, move: Move):
         self._check_valid_move(move)
-        self._board[move.position_x][move.position_y].set_player(move.player)
+        self[move.position].set_player(move.player)
 
     def _get_board_state_string(self) -> str:
         """Utility method to display the board for debugging purposes."""
@@ -92,10 +98,11 @@ class GomokuBoard:
 
 if __name__ == "__main__":
     board = GomokuBoard()
-    move = Move(PlayerEnum.BLACK, 5, 5)
+    dummy_move = Move(PlayerEnum.BLACK, GridPosition(1, 1))
+    move = Move(PlayerEnum.BLACK, GridPosition(5, 5))
     board.make_move(move)    # No assertion error
     print(f"size, {board.size}")
-    print(f"empty move, {board[1,1].get_player()}")
-    print(f"move, {board[5,5].get_player()}")
+    print(f"empty move, {board[GridPosition(1,1)].get_player()}")
+    print(f"move, {board[move.position].get_player()}")
     board.display_board()
     board.store_board("gomoku_board.txt")

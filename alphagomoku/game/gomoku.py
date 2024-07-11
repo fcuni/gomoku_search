@@ -14,12 +14,13 @@ class GomokuGameData:
 
 class GomokuGame:
 
-    def __init__(self):
+    def __init__(self, starting_rule: StartingRule = StartingRule.BASIC):
         self.game_data: GomokuGameData = GomokuGameData()
         self.board: GomokuBoard = GomokuBoard()
-        self.starting_rule: StartingRule = StartingRule.BASIC
+        self.starting_rule: StartingRule = starting_rule
         self.current_player: PlayerEnum = PlayerEnum.BLACK    # Black starts by default
         self.rule_stage: int = 0    # To track stages in Swap and Swap2 rules
+        self.reset()
 
     def make_move(self, move: Move) -> bool:
         """Make a move on the board."""
@@ -41,12 +42,9 @@ class GomokuGame:
         self.winner = None    # Reset the winner
 
         for move in self.moves:
-            player = move.player
-            x = move.position_x
-            y = move.position_y
-            self.board[x][y] = player
-            if self.check_winner(player, x, y):
-                self.winner = player
+            self.board[move] = move.player
+            if self.check_winner(move):
+                self.winner = move.player
 
     def display_board(self):
         ...
@@ -83,15 +81,13 @@ class GomokuGame:
                 return True
         return False
 
-    def initial_rule(self, rule_name):
-        """Set the initial rule for the game (Swap or Swap2)."""
-        if rule_name not in ["Swap", "Swap2"]:
-            raise ValueError("Invalid rule name. Choose 'Swap' or 'Swap2'.")
-        self.current_rule = rule_name
-        self.rule_stage = 1    # Start the rule-specific move stages
-        self.moves = []
-        self.board = [[None for _ in range(15)] for _ in range(15)]    # Reset the board
-        self.winner = None
+    def reset(self):
+        """Reset the game board."""
+        self.game_data: GomokuGameData = GomokuGameData()
+        self.board: GomokuBoard = GomokuBoard()
+        self.starting_rule: StartingRule = starting_rule
+        self.current_player: PlayerEnum = PlayerEnum.BLACK    # Black starts by default
+        self.rule_stage: int = 0    # To track stages in Swap and Swap2 rules
 
     def apply_rule_move(self, player, x, y):
         """Apply a move according to the initial rule."""
