@@ -98,6 +98,8 @@ idna==3.7
     #   jsonschema
     #   requests
     #   yarl
+iniconfig==2.0.0
+    # via pytest
 ipykernel==6.29.5
     # via
     #   jupyter
@@ -279,6 +281,7 @@ packaging==24.1
     #   lightning-utilities
     #   matplotlib
     #   nbconvert
+    #   pytest
     #   pytorch-lightning
     #   qtconsole
     #   qtpy
@@ -301,6 +304,8 @@ platformdirs==4.2.2
     # via
     #   jupyter-core
     #   wandb
+pluggy==1.5.0
+    # via pytest
 prometheus-client==0.20.0
     # via jupyter-server
 prompt-toolkit==3.0.47
@@ -329,6 +334,8 @@ pygments==2.18.0
     #   qtconsole
 pyparsing==3.1.2
     # via matplotlib
+pytest==8.2.2
+    # via research_env (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
     #   arrow
