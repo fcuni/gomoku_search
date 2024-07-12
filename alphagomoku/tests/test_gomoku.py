@@ -5,7 +5,8 @@ from game.gomoku_utils import GridPosition, Move, PlayerEnum
 def get_test_game():
     game = GomokuGame()
     initial_move = Move(PlayerEnum.BLACK, GridPosition(0, 0))
-    game.reset(initial_move)
+    game.reset()
+    game.make_move(initial_move)
     return game, initial_move
 
 

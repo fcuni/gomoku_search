@@ -8,11 +8,13 @@ MoveHistory = list[Move]
 
 @dataclass
 class GomokuGameData:
+    """Class to store the game data."""
     moves: MoveHistory = field(default_factory=list)
     winner: PlayerEnum | None = None
     winning_move: Move | None = None
 
     def to_dict(self) -> dict:
+        """Convert the game data to a dictionary."""
         return {
             "moves": [move.to_dict() for move in self.moves],
             "winner": self.winner.value if self.winner else None,
@@ -21,6 +23,7 @@ class GomokuGameData:
 
     @classmethod
     def from_dict(cls, data: dict) -> "GomokuGameData":
+        """Initialise the game data from a dictionary."""
         winner = PlayerEnum(data["winner"]) if data["winner"] else None
         return cls(
             moves=[Move.from_dict(move) for move in data["moves"]],
@@ -30,17 +33,21 @@ class GomokuGameData:
 
 
 class GomokuGame:
-
-    def __init__(self, starting_rule: StartingRule = StartingRule.BASIC):
+    """Class to represent a game of Gomoku."""
+    def __init__(self, starting_rule: StartingRule = StartingRule.BASIC, board_size: int | tuple[int, int] = 15):
+        """Initialise the game."""
         self.starting_rule: StartingRule = starting_rule
         self.current_player: PlayerEnum = PlayerEnum.BLACK
         self.is_initialised = False
+        self._board_size = board_size
 
     def make_move(self, move: Move, dry_run: bool = False) -> bool:
         """Make a move on the board."""
-        if not dry_run:
-            assert (self.is_initialised), "Game has not been initialised. Please call reset() first."
-        self.board.make_move(move)
+        if not self.is_initialised:
+            self.reset()
+            self._apply_initial_move_rule(initial_move=[move])
+        else:
+            self.board.make_move(move)
         if not dry_run:
             self.game_data.moves.append(move)
             if self.check_winner():
@@ -112,21 +119,22 @@ class GomokuGame:
                 return True
         return False
 
-    def reset(self, initial_move: Move):
+    def reset(self):
         """Reset the game board."""
+        assert not self.is_initialised, "Game has already been initialised"
         # Initialise the game so the board can be manipulated
         self.is_initialised = True
 
         self.game_data: GomokuGameData = GomokuGameData()
-        self.board: GomokuBoard = GomokuBoard()
+        self.board: GomokuBoard = GomokuBoard(size=self._board_size)
         self.current_player: PlayerEnum = PlayerEnum.BLACK    # Black starts by default
         self.rule_stage: int = 0    # To track stages in Swap and Swap2 rule_stage
-        self._apply_rule_move(initial_move)
 
-    def _apply_rule_move(self, initial_move: Move):
+    def _apply_initial_move_rule(self, initial_move: list[Move]):
         """Apply a move according to the initial rule."""
         if self.starting_rule == StartingRule.BASIC:
-            self.make_move(initial_move)
+            assert len(initial_move) == 1, "Only one move is allowed in the basic rule"
+            self.make_move(initial_move[0])
         elif self.starting_rule == "Swap":
             raise NotImplementedError("Swap rule not implemented")
         elif self.starting_rule == "Swap2":
@@ -135,7 +143,5 @@ class GomokuGame:
 
 if __name__ == "__main__":
     game = GomokuGame()
-    game.reset(Move(PlayerEnum.BLACK, GridPosition(0, 0)))
-    game.make_move(Move(PlayerEnum.WHITE, GridPosition(1, 1)))
-    game.store_game_data()
-    game.replay_game("gamedata.json")
+    game.reset(Move(PlayerEnum.BLACK, GridPosition(7, 7)))
+    game.display_board()
