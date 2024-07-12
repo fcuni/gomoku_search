@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+import numpy as np
+
 
 class PlayerEnum(Enum):
     """Enum to represent the player."""
@@ -67,6 +69,8 @@ class GomokuBoard:
         else:
             self._w_size = self._h_size = size
         self._board: list[list[GomokuCell]] = [[GomokuCell() for _ in range(self._w_size)] for _ in range(self._h_size)]
+        self._available_positions = [GridPosition(x, y) for x in range(self._w_size) for y in range(self._h_size)]
+        self._available_position_mask = np.ones(self._w_size * self._h_size, dtype=bool)
 
     def __getitem__(self, position: GridPosition) -> GomokuCell:
         pos_x, pos_y = position()
@@ -76,6 +80,15 @@ class GomokuBoard:
     def size(self):
         """Return the size of the board."""
         return self._w_size, self._h_size
+
+    @property
+    def available_positions(self) -> list[GridPosition]:
+        """Return the available moves on the board."""
+        return self._available_positions
+
+    def get_available_positions_mask(self) -> np.ndarray:
+        """Return the available moves as a mask."""
+        return self._available_position_mask
 
     def _check_valid_move(self, move: Move):
         """Check if the move is valid. A move is valid if the position is within the board and the cell is not occupied."""
@@ -88,6 +101,8 @@ class GomokuBoard:
         """Make a move on the board."""
         self._check_valid_move(move)
         self[move.position].set_player(move.player)
+        self._available_positions.remove(move.position)
+        self._available_position_mask[move.position.x * self._w_size + move.position.y] = False
 
     def _get_board_state_string(self) -> str:
         """Utility method to generate the board as string for debugging purposes."""
