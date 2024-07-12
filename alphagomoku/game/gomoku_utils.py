@@ -23,6 +23,12 @@ class GridPosition:
     x: int
     y: int
 
+    def __eq__(self, other):
+        """Check if the positions are equal."""
+        if not isinstance(other, GridPosition):
+            return False
+        return self.x == other.x and self.y == other.y
+
     def __call__(self):
         """Return the x, y coordinates of the position."""
         return self.x, self.y
@@ -69,12 +75,17 @@ class GomokuBoard:
         else:
             self._w_size = self._h_size = size
         self._board: list[list[GomokuCell]] = [[GomokuCell() for _ in range(self._w_size)] for _ in range(self._h_size)]
+        self._board_np = np.zeros((self._w_size, self._h_size))
         self._available_positions = [GridPosition(x, y) for x in range(self._w_size) for y in range(self._h_size)]
         self._available_position_mask = np.ones(self._w_size * self._h_size, dtype=bool)
 
     def __getitem__(self, position: GridPosition) -> GomokuCell:
         pos_x, pos_y = position()
         return self._board[pos_x][pos_y]
+
+    def to_numpy(self) -> np.ndarray:
+        """Return the board as a numpy array."""
+        return self._board_np
 
     @property
     def size(self):
@@ -103,6 +114,7 @@ class GomokuBoard:
         self[move.position].set_player(move.player)
         self._available_positions.remove(move.position)
         self._available_position_mask[move.position.x * self._w_size + move.position.y] = False
+        self._board_np[move.position.x, move.position.y] = 1 if move.player == PlayerEnum.BLACK else -1
 
     def _get_board_state_string(self) -> str:
         """Utility method to generate the board as string for debugging purposes."""

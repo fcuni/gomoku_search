@@ -12,7 +12,7 @@ def get_test_game():
 
 def test_initialise_game():
     game, init_move = get_test_game()
-    assert game.rule_stage == 0
+    assert game.turn == 1
     assert game.game_data.winner is None
     assert game.game_data.moves == [init_move]
     assert game.board.size == (15, 15)

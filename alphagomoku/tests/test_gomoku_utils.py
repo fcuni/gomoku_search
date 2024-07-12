@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from game.gomoku_utils import GomokuBoard, GomokuCell, GridPosition, Move, PlayerEnum
 
@@ -41,5 +42,23 @@ def test_initialise_board_and_make_move():
         board.make_move(Move(PlayerEnum.WHITE, impossible_position))
 
 
-def test_():
-    pass
+def test_available_positions():
+    dummy_move = Move(PlayerEnum.BLACK, GridPosition(5, 5))
+    board = GomokuBoard()
+    nx, ny = board.size
+    all_positions = [GridPosition(x, y) for x in range(nx) for y in range(ny)]
+
+    # Initially all positions should be available
+    assert board.available_positions == all_positions
+    assert board.get_available_positions_mask().all()
+
+    board.make_move(dummy_move)
+    # After a move, the position should be removed from the available positions
+    # and the mask should be updated
+    assert dummy_move.position not in board.available_positions, "Position should be removed"
+
+    # Test the mask
+    position_mask = board.get_available_positions_mask()
+    assert position_mask[5 * nx + 5] == False, "Position should be masked"
+    position_mask = np.delete(position_mask, 5 * nx + 5)
+    assert position_mask.all(), "All other positions should be available"
