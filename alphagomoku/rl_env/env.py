@@ -30,7 +30,22 @@ class GomokuEnv(gym.Env):
         self._save_board = save_board
         self._steps = 0
 
-    def reset(self) -> tuple[np.ndarray, dict[str, Any]]:
+    @property
+    def is_done(self) -> bool:
+        """Return whether the game is done."""
+        return self._is_done
+
+    @property
+    def is_terminated(self) -> bool:
+        """Return whether the game is terminated."""
+        return self._is_terminated()
+
+    def get_valid_actions(self) -> list[int]:
+        """Get the valid actions."""
+        action_mask = self.game.get_available_positions_mask()
+        return np.where(action_mask.flatten() == 1)[0].tolist()
+
+    def reset(self) -> tuple[np.ndarray, dict[str, Any]]:    # type: ignore
         """Reset the environment."""
         self._is_reset = True
         self.game.reset()
