@@ -1,3 +1,5 @@
+from typing import Any
+
 import gymnasium as gym
 import numpy as np
 from evaluators.base_evaluator import BaseEvaluator
@@ -28,22 +30,17 @@ class GomokuEnv(gym.Env):
         self._save_board = save_board
         self._steps = 0
 
-    def reset(self) -> np.ndarray:
+    def reset(self) -> tuple[np.ndarray, dict[str, Any]]:
         """Reset the environment."""
         self._is_reset = True
         self.game.reset()
         self._steps = 0
 
-        return self.game.board.to_numpy()
+        return self.game.board.to_numpy(), {}
 
     def _is_terminated(self) -> bool:
         """Terminate the game and return True if the game is done. For now, we do not have a termination condition."""
         return self._is_done
-
-    def _evaluate_board(self) -> float:
-        """Evaluate the board and return a score."""
-        has_winner = self.game.game_data.winner is not None
-        return self.board_evaluator.evaluate_board(self.game.board, end_game=has_winner)
 
     def _make_move_from_action(self, action: int) -> Move:
         """Make a move from the action."""
@@ -57,7 +54,7 @@ class GomokuEnv(gym.Env):
         assert self.game.game_data.winner is None, "Game is already done"
 
         self._is_done = self.game.make_move(self._make_move_from_action(action))
-        reward = self._evaluate_board()
+        reward = self.board_evaluator(game=self.game)
         self._steps += 1
 
         return self.game.board.to_numpy(), reward, self._is_done, self._is_terminated(), {}

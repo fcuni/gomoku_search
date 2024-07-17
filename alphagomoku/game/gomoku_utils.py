@@ -9,6 +9,10 @@ class PlayerEnum(Enum):
     BLACK = "B"
     WHITE = "W"
 
+    def __invert__(self):
+        """Return the opponent player."""
+        return PlayerEnum.BLACK if self == PlayerEnum.WHITE else PlayerEnum.WHITE
+
 
 class StartingRule(Enum):
     """Enum to represent the starting rule."""
@@ -56,6 +60,11 @@ class GomokuCell:
         """Initialise the cell."""
         self._current_player: PlayerEnum | None = None
 
+    @property
+    def is_occupied(self) -> bool:
+        """Check if the cell is occupied."""
+        return self._current_player is not None
+
     def get_player(self):
         """Return the player controlling the cell."""
         return self._current_player
@@ -83,12 +92,16 @@ class GomokuBoard:
         pos_x, pos_y = position()
         return self._board[pos_x][pos_y]
 
+    def __repr__(self):
+        """Print out board as a string."""
+        return self._get_board_state_string()
+
     def to_numpy(self) -> np.ndarray:
         """Return the board as a numpy array."""
         return self._board_np
 
     @property
-    def size(self):
+    def size(self) -> tuple[int, int]:
         """Return the size of the board."""
         return self._w_size, self._h_size
 
