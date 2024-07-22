@@ -72,16 +72,16 @@ class GomokuGameUI(QWidget):
             for j in range(height):
                 self.scene.addLine(0, j * cell_size, width * cell_size, j * cell_size, Qt.black)    # type: ignore
 
-        if self._game.is_initialised:
+        if self._game.turn != 0:
             for move in self._game.game_data.moves:
                 self.draw_stone(move.position, move.player)
 
-        self._last_move_ix = len(self._game.game_data.moves)
+        self._last_move_ix = self._game.turn
 
     def update_board(self):
         for move in self._game.game_data.moves[self._last_move_ix:]:
             self.draw_stone(move.position, move.player)
-        self._last_move_ix = len(self._game.game_data.moves)
+        self._last_move_ix = self._game.turn
 
     def draw_stone(self, position: GridPosition, player: PlayerEnum):
         row, col = position()

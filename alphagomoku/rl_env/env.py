@@ -96,6 +96,7 @@ class GomokuEnv(gym.Env):
         if self._render_mode == RenderMode.CMD:
             self.game.display_board()
         elif self._render_mode == RenderMode.UI:
+            # TODO: Fix the UI rendering through the environment
             self._ui.update_board()
             self._ui.show()
         else:
