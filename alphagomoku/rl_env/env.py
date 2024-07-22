@@ -1,13 +1,24 @@
+import os
+import sys
+from enum import Enum
 from typing import Any
 
 import gymnasium as gym
 import numpy as np
 from evaluators.base_evaluator import BaseEvaluator
 from game.gomoku import GomokuGame
+from game.gomoku_ui import GomokuGameUI
 from game.gomoku_utils import GridPosition, Move, StartingRule
+from PyQt5.QtWidgets import QApplication
 
 # Type hint for the step return type: [board observation, reward, done, terminated, debug_info]
 StepReturnType = tuple[np.ndarray, float, bool, bool, dict]
+
+
+class RenderMode(str, Enum):
+    """Render mode for the environment."""
+    CMD = "cmd"
+    UI = "ui"
 
 
 class GomokuEnv(gym.Env):
@@ -17,7 +28,8 @@ class GomokuEnv(gym.Env):
         board_evaluator: BaseEvaluator,
         board_size: int | tuple[int, int] = 15,
         starting_rule: StartingRule = StartingRule.BASIC,
-        save_board: bool = False
+        save_board: bool = False,
+        render_mode: RenderMode = RenderMode.CMD,
     ):
         """Initialise the environment."""
         self.game: GomokuGame = GomokuGame(starting_rule=starting_rule, board_size=board_size)
@@ -29,6 +41,11 @@ class GomokuEnv(gym.Env):
         self._is_done = False
         self._save_board = save_board
         self._steps = 0
+        self._render_mode = render_mode
+        if render_mode == RenderMode.UI:
+            os.environ["QT_QPA_PLATFORM"] = "wayland"
+            self._app = QApplication(sys.argv)
+            self._ui = GomokuGameUI(self.game)
 
     @property
     def is_done(self) -> bool:
@@ -40,10 +57,10 @@ class GomokuEnv(gym.Env):
         """Return whether the game is terminated."""
         return self._is_terminated()
 
-    def get_valid_actions(self) -> list[int]:
+    def get_valid_actions(self) -> np.ndarray:
         """Get the valid actions."""
         action_mask = self.game.get_available_positions_mask()
-        return np.where(action_mask.flatten() == 1)[0].tolist()
+        return np.where(action_mask.flatten() == 1)[0]
 
     def reset(self) -> tuple[np.ndarray, dict[str, Any]]:    # type: ignore
         """Reset the environment."""
@@ -76,4 +93,10 @@ class GomokuEnv(gym.Env):
 
     def render(self):
         """Render the environment."""
-        self.game.display_board()
+        if self._render_mode == RenderMode.CMD:
+            self.game.display_board()
+        elif self._render_mode == RenderMode.UI:
+            self._ui.update_board()
+            self._ui.show()
+        else:
+            raise ValueError(f"Invalid render mode: {self._render_mode}")

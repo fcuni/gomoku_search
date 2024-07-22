@@ -11,6 +11,7 @@ setup(
         "matplotlib",
         "numpy",
         "pandas",
+        "PyQt5",
         "seaborn",
         "torch",
         "torchvision",
