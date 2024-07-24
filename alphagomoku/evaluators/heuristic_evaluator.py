@@ -1,6 +1,6 @@
 import numpy as np
 from evaluators.base_evaluator import MAX_END_GAME_SCORE, BaseEvaluator
-from game.gomoku_utils import GomokuBoard, GridPosition, PlayerEnum
+from game.gomoku_utils import GomokuBoard, GridPosition, Move, PlayerEnum
 
 
 class HeuristicEvaluator(BaseEvaluator):
@@ -21,7 +21,7 @@ class HeuristicEvaluator(BaseEvaluator):
         self.tabular_value_fn: np.ndarray | None = None
         self.tabular_value_fn_opp: np.ndarray | None = None
         # Align scores with the number of cells in a row
-        self._scores = np.array([0, 1, 3, 9, 27, 1000])
+        self.score_weights = np.array([0, 1, 3, 9, 27, 1000])
 
     def evaluate_board(self, board: GomokuBoard, from_player: PlayerEnum, end_game: bool) -> int:
         """Evaluate the board and return a score."""
@@ -36,74 +36,63 @@ class HeuristicEvaluator(BaseEvaluator):
     def _evaluate_board(self, board: GomokuBoard, from_player: PlayerEnum) -> int:
         """Evaluate the board in the middle of the game."""
         self.tabular_value_fn = np.zeros((board.size), dtype=int)
-        seen_positions: list[bool] = [False] * np.prod(board.size)
         x, y = board.size
         for i in range(x):
             for j in range(y):
-                position = x * i + j
-                if not seen_positions[position]:
-                    chain_value = self._get_cell_value(board, i, j, seen_positions, from_player)
-                    self.tabular_value_fn[i, j] = chain_value
+                cell_owner = board[GridPosition(i, j)].get_player()
+                if cell_owner is not None:
+                    chain_value = 0
+                else:
+                    chain_value = self._get_cell_value(board, i, j, from_player)
+                self.tabular_value_fn[i, j] = chain_value
         return self.tabular_value_fn.sum()
 
-    def _get_cell_value(
-        self, board: GomokuBoard, x: int, y: int, seen_positions: list[bool], from_player: PlayerEnum
-    ) -> int:
+    def _get_cell_value(self, board: GomokuBoard, x: int, y: int, from_player: PlayerEnum) -> int:
         """Get the characteristics of a chain."""
-        cell_values: list[int] = []
+        cell_values: list[tuple[int, PlayerEnum | None]] = []
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                seen_positions[x * dx + dy] = True
-                cell_values.append(self._get_value_helper_fn(board, x, y, dx, dy, seen_positions, from_player))
-        return max(cell_values)
+                cell_values += [self._get_value_helper_fn(board, x, y, dx, dy)]
+        max_value, played_by = max(cell_values, key=lambda x: x[0])
+        player_multiplier = 1 if played_by == from_player else -1
+        return player_multiplier * max_value
 
     def _is_valid_position(self, board: GomokuBoard, x: int, y: int) -> bool:
         """Check if a position is valid."""
         return 0 <= x < board.size[0] and 0 <= y < board.size[1]
 
-    def _get_value_helper_fn(
-        self, board: GomokuBoard, x: int, y: int, dx: int, dy: int, seen_positions: list[bool], from_player: PlayerEnum
-    ) -> int:
+    def _get_value_helper_fn(self, board: GomokuBoard, x: int, y: int, dx: int,
+                             dy: int) -> tuple[int, PlayerEnum | None]:
         """Get the value of a chain."""
         length = 0
-        current_player = None
+        chain_owner = None
         ends = [False, False]
         if self._is_valid_position(board, x - dx, y - dy):
+            # check if the cell prior to the chain is empty
             ends[0] = board[GridPosition(x - dx, y - dy)].get_player() is None
         while True:
             x += dx
             y += dy
             if not self._is_valid_position(board, x, y):
+                # if going outside of the bounds of the board just break
                 break
+            # assign player that owns the cell, if any
             current_player = board[GridPosition(x, y)].get_player()
             if current_player is None:
+                # if no one owns the cell, the chain is broken and open-ended, break
                 ends[1] = True
                 break
-            if board[GridPosition(x, y)].get_player() != current_player:
+            if chain_owner is None:
+                # if the chain has no owner, assign the owner
+                chain_owner = current_player
+            if chain_owner != current_player:
+                # if the cell is owned by the opponent, the chain is broken and closed-ended, break
                 break
+            # otherwise, it is owned by the current player, increase the length of the chain by 1
             length += 1
-            seen_positions[x * dx + y * dy] = True
+        # assign multiplier to the chain based on: open, semi-open, closed as (2, 1, 0)
         chain_end_multiplier = sum(ends)
-        chain_player_multiplier = 1 if from_player == current_player else -1
-        chain_multiplier = chain_end_multiplier * chain_player_multiplier
 
-        return chain_multiplier * self._scores[length]
-
-
-if __name__ == "__main__":
-    from tests.test_evaluators import dummy_game
-    game = dummy_game()
-    evaluator = HeuristicEvaluator()
-    last_move_player = PlayerEnum.BLACK
-    current_player = PlayerEnum.WHITE
-
-    # first move
-    score = evaluator.evaluate_board(game.board, from_player=last_move_player, end_game=False)
-    opp_score = evaluator.evaluate_board(game.board, from_player=current_player, end_game=False)
-    print(score)
-    print(game.board)
-    print(evaluator.tabular_value_fn)
-    assert score == 16, f"For a single move with double ended sides, the score should be 16 for {last_move_player}"
-    assert opp_score == -16, f"For a single move with double ended sides, the score should be -16 for {current_player}"
+        return chain_end_multiplier * self.score_weights[length], chain_owner

@@ -2,12 +2,11 @@ from dataclasses import dataclass
 
 from game.gomoku import GomokuGame
 from game.gomoku_utils import GridPosition, Move, PlayerEnum
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPen
 
 # PyQT5 is used for the UI
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPen
 from PyQt5.QtWidgets import (
-    QApplication,
     QGraphicsEllipseItem,
     QGraphicsScene,
     QGraphicsView,
@@ -103,7 +102,6 @@ class GomokuGameUI(QWidget):
         if event.button() == Qt.LeftButton:    # type: ignore
             y = event.x() // self.config.cell_size - 1
             x = event.y() // self.config.cell_size - 1
-            print(event.x(), event.y(), x, y)
             current_player = self._game.current_player
             move = Move(current_player, GridPosition(x, y))
             try:

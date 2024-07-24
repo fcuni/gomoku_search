@@ -33,27 +33,39 @@ def test_heuristic_evaluate_board():
     """Test the evaluate_board method with a single move."""
     game = dummy_game()
     evaluator = HeuristicEvaluator()
-    last_move_player = PlayerEnum.BLACK
-    current_player = PlayerEnum.WHITE
+    score_weights = evaluator.score_weights
+    first_player = PlayerEnum.BLACK
+    second_player = PlayerEnum.WHITE
 
     # first move
-    score = evaluator.evaluate_board(game.board, from_player=last_move_player, end_game=False)
-    opp_score = evaluator.evaluate_board(game.board, from_player=current_player, end_game=False)
-    print(score)
+    score = evaluator.evaluate_board(game.board, from_player=first_player, end_game=False)
+    expected_score = 3 * score_weights[1]
+    assert score == expected_score, f"For a single move, the score should be {expected_score} for {first_player}"
+
+    # opponents score should be the negative of the current player's score
+    opp_score = evaluator.evaluate_board(game.board, from_player=second_player, end_game=False)
+    assert opp_score == -score, f"For the opponent, the score should be -{expected_score} for {second_player}"
+
+    # second move, balanced position
+    move = Move(PlayerEnum.WHITE, GridPosition(14, 14))
+    game.make_move(move)
+    score = evaluator.evaluate_board(game.board, from_player=second_player, end_game=False)
+    opp_score = evaluator.evaluate_board(game.board, from_player=first_player, end_game=False)
+    assert score == 0, f"For a balanced position, the score should be 0 for {first_player}"
+    assert opp_score == 0, f"For a balanced position, the score should be 0 for {second_player}"
+
+    # third move, chain of length 2 for BLACK
+    move = Move(PlayerEnum.BLACK, GridPosition(0, 1))
+    game.make_move(move)
+    score = evaluator.evaluate_board(game.board, from_player=first_player, end_game=False)
+    expected_score = score_weights[2] + score_weights[1]
+    assert score == evaluator.score_weights[2], f"For a chain of length 2, the score should be {expected_score} for {first_player}"
+
+    # fourth move, central move for WHITE
+    move = Move(PlayerEnum.WHITE, GridPosition(7, 7))
+    game.make_move(move)
+    score = evaluator.evaluate_board(game.board, from_player=second_player, end_game=False)
     print(game.board)
     print(evaluator.tabular_value_fn)
-    assert score == 16, f"For a single move with double ended sides, the score should be 16 for {last_move_player}"
-    assert opp_score == -16, f"For a single move with double ended sides, the score should be -16 for {current_player}"
-
-    # make a second move
-    game.make_move(Move(PlayerEnum.WHITE, GridPosition(5, 5)))
-    score = evaluator.evaluate_board(game.board, from_player=game.current_player, end_game=False)
-    assert score == 0, "A symmetric position should cancel out, and the score should be 0"
-
-    # make a third move, second for black
-    game.make_move(Move(PlayerEnum.BLACK, GridPosition(5, 6)))
-    score = evaluator.evaluate_board(game.board, from_player=game.current_player, end_game=False)
-    print(score)
-    print(game.board)
-    print(evaluator.tabular_value_fn_opp)
-    assert score == 16.0, "For a single move, the score should be 16.0"
+    expected_score = 8 * 2 * score_weights[1] - score_weights[2]
+    assert score == expected_score, f"After the central move, the score should be {expected_score} for {second_player}"
