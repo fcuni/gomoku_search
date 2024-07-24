@@ -1,35 +1,24 @@
-import os
-import sys
-from enum import Enum
 from typing import Any
 
 import gymnasium as gym
 import numpy as np
 from evaluators.base_evaluator import BaseEvaluator
+from evaluators.heuristic_evaluator import HeuristicEvaluator
 from game.gomoku import GomokuGame
-from game.gomoku_ui import GomokuGameUI
 from game.gomoku_utils import GridPosition, Move, StartingRule
-from PyQt5.QtWidgets import QApplication
 
 # Type hint for the step return type: [board observation, reward, done, terminated, debug_info]
 StepReturnType = tuple[np.ndarray, float, bool, bool, dict]
-
-
-class RenderMode(str, Enum):
-    """Render mode for the environment."""
-    CMD = "cmd"
-    UI = "ui"
 
 
 class GomokuEnv(gym.Env):
     """Gomoku environment for reinforcement learning."""
     def __init__(
         self,
-        board_evaluator: BaseEvaluator,
+        board_evaluator: BaseEvaluator = HeuristicEvaluator(),
         board_size: int | tuple[int, int] = 15,
         starting_rule: StartingRule = StartingRule.BASIC,
         save_board: bool = False,
-        render_mode: RenderMode = RenderMode.CMD,
     ):
         """Initialise the environment."""
         self.game: GomokuGame = GomokuGame(starting_rule=starting_rule, board_size=board_size)
@@ -41,11 +30,6 @@ class GomokuEnv(gym.Env):
         self._is_done = False
         self._save_board = save_board
         self._steps = 0
-        self._render_mode = render_mode
-        if render_mode == RenderMode.UI:
-            os.environ["QT_QPA_PLATFORM"] = "wayland"
-            self._app = QApplication(sys.argv)
-            self._ui = GomokuGameUI(self.game)
 
     @property
     def is_done(self) -> bool:
@@ -89,15 +73,12 @@ class GomokuEnv(gym.Env):
         reward = self.board_evaluator(game=self.game)
         self._steps += 1
 
+        if self._save_board and self._is_done:
+            self.game.board.store_board()
+            self.game.store_game_data()
+
         return self.game.board.to_numpy(), reward, self._is_done, self._is_terminated(), {}
 
     def render(self):
         """Render the environment."""
-        if self._render_mode == RenderMode.CMD:
-            self.game.display_board()
-        elif self._render_mode == RenderMode.UI:
-            # TODO: Fix the UI rendering through the environment
-            self._ui.update_board()
-            self._ui.show()
-        else:
-            raise ValueError(f"Invalid render mode: {self._render_mode}")
+        self.game.display_board()

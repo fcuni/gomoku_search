@@ -1,4 +1,7 @@
+import os
+import sys
 from dataclasses import dataclass
+from enum import Enum
 
 from game.gomoku import GomokuGame
 from game.gomoku_utils import GridPosition, Move, PlayerEnum
@@ -7,6 +10,7 @@ from game.gomoku_utils import GridPosition, Move, PlayerEnum
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPen
 from PyQt5.QtWidgets import (
+    QApplication,
     QGraphicsEllipseItem,
     QGraphicsScene,
     QGraphicsView,
@@ -14,6 +18,12 @@ from PyQt5.QtWidgets import (
     QLabel,
     QWidget,
 )
+
+
+class RenderMode(str, Enum):
+    """Render mode for the environment."""
+    CMD = "cmd"
+    UI = "ui"
 
 
 @dataclass
@@ -74,6 +84,8 @@ class GomokuGameUI(QWidget):
         if self._game.turn != 0:
             for move in self._game.game_data.moves:
                 self.draw_stone(move.position, move.player)
+            if self._game.game_data.winner is not None:
+                self.setDisabled(True)
 
         self._last_move_ix = self._game.turn
 
@@ -98,7 +110,7 @@ class GomokuGameUI(QWidget):
         stone.setPen(outline)
         self.scene.addItem(stone)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):    # type: ignore
         if event.button() == Qt.LeftButton:    # type: ignore
             y = event.x() // self.config.cell_size - 1
             x = event.y() // self.config.cell_size - 1
@@ -114,3 +126,18 @@ class GomokuGameUI(QWidget):
                     self.setDisabled(True)
             except AssertionError:
                 print(f"Invalid move: {move}")
+
+
+def show_board_in_ui(game: GomokuGame | None = None, gamedata_file: str | None = None):
+    """Show the board in a UI."""
+    assert game or gamedata_file, "Either the environment or the game data file must be provided."
+    if gamedata_file:
+        full_path = os.path.join(os.getcwd(), gamedata_file)
+        game = GomokuGame.replay_game(full_path, print_board=False)
+
+    os.environ["QT_QPA_PLATFORM"] = "wayland" if sys.platform == "linux" else "xlge"
+
+    app = QApplication(sys.argv)
+    ui = GomokuGameUI(game)    # type: ignore
+    ui.show()
+    sys.exit(app.exec_())

@@ -1,4 +1,5 @@
 import json
+import os
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -65,10 +66,11 @@ class GomokuGame:
         self._turn += 1
         return self.game_data.winner is not None
 
-    def store_game_data(self, file_path: str = "gamedata.json"):
+    def store_game_data(self, filename: str = "gamedata.json"):
         """Store the moves of the game as a JSON string."""
-        with open(file_path, "w") as f:
+        with open(filename, "w") as f:
             json.dump(self.game_data.to_dict(), f)
+            print(f"Game data stored in {os.getcwd()}/{filename}")
 
     @classmethod
     def replay_game(cls, game_json, print_board: bool = True) -> "GomokuGame":
@@ -150,6 +152,7 @@ class GomokuGame:
 
     def _apply_initial_move_rule(self, initial_move: list[Move]):
         """Apply a move according to the initial rule."""
+        # TODO:: Implement non-basic starting rules, see wiki
         if self.starting_rule == StartingRule.BASIC:
             assert len(initial_move) == 1, "Only one move is allowed in the basic rule"
             self.is_initialised = True

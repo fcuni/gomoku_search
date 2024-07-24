@@ -59,6 +59,6 @@ def test_available_positions():
 
     # Test the mask
     position_mask = board.get_available_positions_mask()
-    assert position_mask[5 * nx + 5] == False, "Position should be masked"
+    assert position_mask[5 * nx + 5] == -1, "Position should be masked"
     position_mask = np.delete(position_mask, 5 * nx + 5)
     assert position_mask.all(), "All other positions should be available"

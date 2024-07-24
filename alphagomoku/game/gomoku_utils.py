@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from enum import Enum
 
@@ -9,7 +10,7 @@ class PlayerEnum(Enum):
     BLACK = "B"
     WHITE = "W"
 
-    def __invert__(self):
+    def __invert__(self) -> "PlayerEnum":
         """Return the opponent player."""
         return PlayerEnum.BLACK if self == PlayerEnum.WHITE else PlayerEnum.WHITE
 
@@ -27,13 +28,13 @@ class GridPosition:
     x: int
     y: int
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Check if the positions are equal."""
         if not isinstance(other, GridPosition):
             return False
         return self.x == other.x and self.y == other.y
 
-    def __call__(self):
+    def __call__(self) -> tuple[int, int]:
         """Return the x, y coordinates of the position."""
         return self.x, self.y
 
@@ -44,12 +45,12 @@ class Move:
     player: PlayerEnum
     position: GridPosition
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """Convert the move to a dictionary."""
-        return {"player": self.player.value, "position": self.position()}
+        return {"player": self.player.value, "position": list(map(int, self.position()))}
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict) -> "Move":
         """Initialise the move from a dictionary."""
         return cls(PlayerEnum(data["player"]), GridPosition(*data["position"]))
 
@@ -65,7 +66,7 @@ class GomokuCell:
         """Check if the cell is occupied."""
         return self._current_player is not None
 
-    def get_player(self):
+    def get_player(self) -> PlayerEnum | None:
         """Return the player controlling the cell."""
         return self._current_player
 
@@ -84,9 +85,9 @@ class GomokuBoard:
         else:
             self._w_size = self._h_size = size
         self._board: list[list[GomokuCell]] = [[GomokuCell() for _ in range(self._w_size)] for _ in range(self._h_size)]
-        self._board_np = np.zeros((self._w_size, self._h_size))
+        self._board_np = np.zeros((self._w_size, self._h_size), dtype=np.int32)
         self._available_positions = [GridPosition(x, y) for x in range(self._w_size) for y in range(self._h_size)]
-        self._available_position_mask = np.ones(self._w_size * self._h_size, dtype=bool)
+        self._available_position_mask = np.ones(self._w_size * self._h_size, dtype=np.int32)
 
     def __getitem__(self, position: GridPosition) -> GomokuCell:
         pos_x, pos_y = position()
@@ -126,7 +127,7 @@ class GomokuBoard:
         self._check_valid_move(move)
         self[move.position].set_player(move.player)
         self._available_positions.remove(move.position)
-        self._available_position_mask[move.position.x * self._w_size + move.position.y] = False
+        self._available_position_mask[move.position.x * self._w_size + move.position.y] = -1
         self._board_np[move.position.x, move.position.y] = 1 if move.player == PlayerEnum.BLACK else -1
 
     def _get_board_state_string(self) -> str:
@@ -135,7 +136,7 @@ class GomokuBoard:
         board_str = ""
 
         def cell_repr(cell: GomokuCell):
-            return " " if not cell.get_player() else cell.get_player().value
+            return " " if not cell.get_player() else cell.get_player().value    # type: ignore
 
         horizontal_line = "=" * (17 * 4)
         column_numbers = "   " + "".join(f" {i:2} " for i in range(15))
@@ -153,7 +154,8 @@ class GomokuBoard:
         """Stdout the current state of the board."""
         print(self._get_board_state_string())
 
-    def store_board(self, file_path: str):
+    def store_board(self, filename: str = "gomoku_board.txt"):
         """Store the current state of the board to a file."""
-        with open(file_path, "w") as f:
+        with open(filename, "w") as f:
             f.write(self._get_board_state_string())
+            print(f"Board stored in {os.getcwd()}/{filename}")
