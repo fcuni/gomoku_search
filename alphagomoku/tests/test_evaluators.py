@@ -29,8 +29,27 @@ def test_evaluate_endgame():
     assert score == MAX_END_GAME_SCORE, f"Endgame is not {MAX_END_GAME_SCORE=}"
 
 
+def test_evaluate_move():
+    """Test the evaluate_move method."""
+    game = dummy_game()
+    evaluator = HeuristicEvaluator()
+
+    empty_game = GomokuGame()
+    empty_game.reset()
+    move = Move(PlayerEnum.BLACK, GridPosition(0, 0))
+
+    score = evaluator.evaluate_move(empty_game, move)
+    expected_score = evaluator.evaluate_board(game.board, from_player=move.player, end_game=False)
+
+    # check evaluating the move is equivalent to evaluating the board after the move
+    assert score == expected_score, f"The score of the move should be {expected_score}"
+
+    # check the game is not modified
+    assert len(empty_game.game_data.moves) == 0, "The game should not be modified"
+
+
 def test_heuristic_evaluate_board():
-    """Test the evaluate_board method with a single move."""
+    """Test the evaluate_board method."""
     game = dummy_game()
     evaluator = HeuristicEvaluator()
     score_weights = evaluator.score_weights
@@ -65,7 +84,5 @@ def test_heuristic_evaluate_board():
     move = Move(PlayerEnum.WHITE, GridPosition(7, 7))
     game.make_move(move)
     score = evaluator.evaluate_board(game.board, from_player=second_player, end_game=False)
-    print(game.board)
-    print(evaluator.tabular_value_fn)
     expected_score = 8 * 2 * score_weights[1] - score_weights[2]
     assert score == expected_score, f"After the central move, the score should be {expected_score} for {second_player}"
