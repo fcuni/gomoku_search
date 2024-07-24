@@ -4,6 +4,7 @@ setup(
     name="alphagomoku",
     version="0.1",
     packages=find_packages(where="alphagomoku"),
+    package_data={"": ["py.typed"]},
     package_dir={"": "alphagomoku"},
     install_requires=[
         "debugpy",
