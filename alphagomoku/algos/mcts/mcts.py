@@ -38,7 +38,7 @@ class MCTSConfig:
     "Exploration constant."
     initial_prior: float = 1.0
     "Initial prior for unexpanded nodes."
-    add_root_noise: bool = True
+    add_root_noise: bool = False
     "Whether to add Dirichlet noise to the root node."
     dirichlet_alpha: float = 0.03
     "Dirichlet noise alpha parameter."
@@ -46,7 +46,8 @@ class MCTSConfig:
     "Exploration fraction for the Dirichlet noise added to the root node."
     deterministic: bool = False
     "Deterministic flag."
-    max_workers: int = field(default_factory=lambda: os.cpu_count() // 2)    # type: ignore
+    # TODO: Fix parallelisation, see below. Use only one worker for now.
+    max_workers: int = 1    #  field(default_factory=lambda: os.cpu_count() // 2)    # type: ignore
     "Number of workers to use for parallel simulations."
     ## Muzero specific parameters
     use_muzero: bool = False
@@ -124,19 +125,23 @@ class MCTS:
             to_play=starting_player,
             children={a: TreeNode(prior=self.config.initial_prior) for a in env.get_valid_actions()}
         )
-        if self.config.add_root_noise:
-            # add Dirichlet noise, a la AlphaX papers
-            self.root_node.add_exploration_noise(self.config.dirichlet_alpha, self.config.exploration_fraction)
 
+        # TODO: Fix parallelisation, backpropagation is not thread-safe. Use only one worker for now.
         with cf.ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             futures = []
             for _ in range(self.config.num_simulations):
+                if self.config.add_root_noise:
+                    # add Dirichlet noise, a la AlphaX papers
+                    self.root_node.add_exploration_noise(self.config.dirichlet_alpha, self.config.exploration_fraction)
                 cloned_env_ = deepcopy(env)
                 futures.append(executor.submit(self._single_rollout, self.root_node, self.tree_stats, cloned_env_))
 
-            for future in cf.as_completed(futures):
+            for ix, future in enumerate(cf.as_completed(futures)):
                 tree_path, end_value = future.result()
                 self._backpropagate(tree_path, end_value, starting_player, self.tree_stats)
+                n_sim = (ix + 1)
+                if n_sim % 100 == 0:
+                    print(f"Done with {n_sim}/{self.config.num_simulations} simulations.")
 
         # once the simulation is done, return best Move
         best_action, _ = self.select_children(self.root_node, self.tree_stats)
