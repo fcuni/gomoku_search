@@ -60,14 +60,14 @@ class GomokuEnv(gym.Env):
 
     def _make_move_from_action(self, action: int) -> Move:
         """Make a move from the action."""
-        pos = GridPosition(action // self.game.board.size[0], action % self.game.board.size[1])
+        pos = GridPosition.from_int(action, board_size=self.game.board.size)
         return Move(self.game.current_player, pos)
 
     def step(self, action: int) -> StepReturnType:
         """Take a step in the environment."""
         assert self._is_reset, "Environment must be reset before taking a step"
         assert self.action_space.contains(action), f"Invalid action: {action}"
-        assert self.game.game_data.winner is None, "Game is already done"
+        assert self.game.game_data.winner is None, f"Game is already done after {self._steps} steps."
 
         self._is_done = self.game.make_move(self._make_move_from_action(action))
         reward = self.board_evaluator(game=self.game)

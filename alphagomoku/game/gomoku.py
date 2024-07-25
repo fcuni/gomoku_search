@@ -64,7 +64,7 @@ class GomokuGame:
                 self.game_data.winning_move = move
             self.current_player = (PlayerEnum.WHITE if self.current_player == PlayerEnum.BLACK else PlayerEnum.BLACK)
         self._turn += 1
-        return self.game_data.winner is not None
+        return self.game_data.winner is not None or len(self.get_available_positions()) == 0
 
     def store_game_data(self, filename: str = "gamedata.json"):
         """Store the moves of the game as a JSON string."""

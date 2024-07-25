@@ -38,6 +38,14 @@ class GridPosition:
         """Return the x, y coordinates of the position."""
         return self.x, self.y
 
+    @classmethod
+    def from_int(cls, value: int, board_size: tuple[int, int]) -> "GridPosition":
+        """
+        Return a GridPosition from an integer position following the convention, that
+            x = value // board.size[0]; y = value % board.size[1]
+        """
+        return cls(value // board_size[0], value % board_size[1])
+
 
 @dataclass
 class Move:
@@ -120,7 +128,7 @@ class GomokuBoard:
         position_x, position_y = move.position()
         assert (0 <= position_x <= self._w_size), f"Move x-value must be between 0 and {self._w_size}, got {position_x}"
         assert (0 <= position_y <= self._h_size), f"Move y-value must be between 0 and {self._h_size}, got {position_y}"
-        assert self[move.position].get_player() is None, "Cell is already occupied"
+        assert self[move.position].get_player() is None, f"Cell is already occupied, tried {move.position}"
 
     def make_move(self, move: Move):
         """Make a move on the board."""

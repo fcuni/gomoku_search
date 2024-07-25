@@ -39,8 +39,9 @@ class TreeNode:
     """Hidden state of the node."""
     reward: float = 0.0
     """Reward of the node, in case a value function is used."""
-    def is_leaf(self) -> bool:
-        return len(self.children) == 0
+    @property
+    def is_expanded(self) -> bool:
+        return len(self.children) != 0
 
     def value(self) -> float:
         if self.visit_count == 0:
@@ -50,7 +51,7 @@ class TreeNode:
     def expand(
         self,
         to_play: PlayerEnum,
-        actions: list[int],
+        actions: np.ndarray,
         hidden_state: np.ndarray | None = None,
         reward: float = 0.0,
         policy_logits: np.ndarray | None = None
@@ -60,14 +61,15 @@ class TreeNode:
 
         The prior is computed from the policy logits, if given. Otherwise, it is set to 1.
         """
+        assert actions.ndim == 1, f"Expect the dimensions in the actions array to be (1,), but got {actions.ndim}"
         self.to_play = to_play
         self.hidden_state = hidden_state
         self.reward = reward
         if policy_logits is None:
             policy_logits = np.zeros(len(actions))
         norm_sum = np.sum(np.exp(policy_logits))
-        prior = {a: np.exp(policy_logits[a]) / norm_sum for a in actions}
-        self.children = {action: TreeNode(prior=prior[action]) for action in actions}
+        prior = {a: np.exp(policy_logits[ix]) / norm_sum for ix, a in enumerate(actions)}
+        self.children = {action: TreeNode(prior=prior[action]) for action in actions.tolist()}
 
     def add_exploration_noise(self, dirichlet_alpha: float, exploration_fraction: float):
         """In the root node, add Dirichlet noise to the prior of the children. This is the recipe used in the AlphaZero-like papers."""
