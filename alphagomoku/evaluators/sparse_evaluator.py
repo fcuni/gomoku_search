@@ -11,4 +11,5 @@ class SparseEvaluator(BaseEvaluator):
     def evaluate_board(self, board: GomokuBoard, from_player: PlayerEnum, end_game: bool) -> int:
         if end_game:
             return 1
+        # in case of a draw, return 0
         return 0

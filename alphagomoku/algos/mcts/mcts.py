@@ -15,16 +15,21 @@ The MCTS implementation in this file is heavily motivated by the MuZero paper, s
 https://arxiv.org/pdf/1911.08265.
 """
 
-import concurrent.futures as cf
 import os
+import time
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
 from algos.mcts.mcts_utils import TreeNode, TreeStats
+from experiment_logging.base_logging_connector import (
+    BaseLoggingConnector,
+    NoopLoggingConnector,
+)
+from experiment_logging.wandb_connector import WandBConnector
 from game.gomoku_utils import GridPosition, Move, PlayerEnum
 from rl_env.env import GomokuEnv
 
@@ -34,7 +39,7 @@ class MCTSConfig:
     """Configuration for MCTS."""
     num_simulations: int = 800
     "Number of simulations to run."
-    ct: float = 1.0
+    ct: float = 5.0
     "Exploration constant."
     initial_prior: float = 1.0
     "Initial prior for unexpanded nodes."
@@ -56,6 +61,8 @@ class MCTSConfig:
     "Initial value for the log correction to the UCB formula. Default is from the MuZero paper."
     mu_ct: float = 1.25
     "Initial value for the UCB exploration constant. Default is from the MuZero paper."
+    # Metric logger
+    metric_logger: BaseLoggingConnector = WandBConnector()
 
 
 class MCTS:
@@ -71,19 +78,32 @@ class MCTS:
         self.policy_network = policy_network
         self.tree_stats: TreeStats = TreeStats()
         self.root_node: TreeNode | None = None
+        self.logger = mcts_config.metric_logger
+        self.logger.start()
+        self.rollout_metrics = {
+            "won_ratio": 0.,
+            "draw_ratio": 0.,
+            "lost_ratio": 0.,
+            "matches_played": 0,
+        }
 
     def _single_rollout(self, root_node: TreeNode, tree_stats: TreeStats,
-                        env: GomokuEnv) -> tuple[list[TreeNode], float]:
+                        env: GomokuEnv) -> tuple[list[TreeNode], float, PlayerEnum | None]:
         """
         Rollout a from a given root node and return the necessary quantities to backpropagate.
 
         If we reach a unexpanded node, we expand it and random walk from one of the children until we reach a terminal state.
         """
         current_node = root_node
+        starting_player = env.game.current_player
         tree_path = [current_node]
         reward = 0
         next_children = None
         done = False
+
+        if self.config.add_root_noise:
+            # add Dirichlet noise, a la AlphaX papers
+            current_node.add_exploration_noise(self.config.dirichlet_alpha, self.config.exploration_fraction)
 
         while current_node.is_expanded:
             # while the node has children, select the best child node as (p)UCT
@@ -102,46 +122,68 @@ class MCTS:
                 policy_logits = None
                 hidden_state = None
             current_node.expand(
-                env.game.current_player,
+                ~env.game.current_player,
                 env.get_valid_actions(),
                 hidden_state=hidden_state,
                 policy_logits=policy_logits,
-                reward=reward
             )
 
         # simulate to the end of the game and return the path and end reward to backpropagate
         while not done:
             next_action = np.random.choice(env.get_valid_actions())
             _, reward, done, _, _ = env.step(next_action)
-        return tree_path, reward
+        winner = env.game.game_data.winner
+        self.rollout_metrics["matches_played"] += 1
+        if winner is None:
+            self.rollout_metrics["draw_ratio"] = (
+                self.rollout_metrics["draw_ratio"] * (self.rollout_metrics["matches_played"] - 1) + 1
+            ) / self.rollout_metrics["matches_played"]
+        elif winner == starting_player:
+            self.rollout_metrics["won_ratio"] = (
+                self.rollout_metrics["won_ratio"] * (self.rollout_metrics["matches_played"] - 1) + 1
+            ) / self.rollout_metrics["matches_played"]
+        else:
+            self.rollout_metrics["lost_ratio"] = (
+                self.rollout_metrics["lost_ratio"] * (self.rollout_metrics["matches_played"] - 1) + 1
+            ) / self.rollout_metrics["matches_played"]
+        return tree_path, reward, winner
 
     def run(self, env: GomokuEnv, visualise_policy: bool = False) -> Move:
-        """..."""
+        """
+        The main MCTS loop.
+
+        The loop is composed of the following steps:
+        * Selection: Start from the root node and select the best child node until we reach an unexpanded node.
+        * Expansion: If we reach an unexpanded node, expand it.
+        * Simulation: Simulate the game until the end, by making random moves.
+        * Backpropagation: Backpropagate the results of the simulation to the root node.
+
+        The loop is repeated for a given number of simulations, and the best move is returned at the end.
+        """
         starting_player = env.game.current_player
         self.tree_stats = TreeStats()
-        # preexpand root node
         self.root_node = TreeNode(
             prior=self.config.initial_prior,
             to_play=starting_player,
-            children={a: TreeNode(prior=self.config.initial_prior) for a in env.get_valid_actions()}
         )
 
-        # TODO: Fix parallelisation, backpropagation is not thread-safe. Use only one worker for now.
-        with cf.ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
-            futures = []
-            for _ in range(self.config.num_simulations):
-                if self.config.add_root_noise:
-                    # add Dirichlet noise, a la AlphaX papers
-                    self.root_node.add_exploration_noise(self.config.dirichlet_alpha, self.config.exploration_fraction)
-                cloned_env_ = deepcopy(env)
-                futures.append(executor.submit(self._single_rollout, self.root_node, self.tree_stats, cloned_env_))
+        for n in range(self.config.num_simulations):
+            cloned_env_ = deepcopy(env)
+            tree_path, end_value, winner = self._single_rollout(self.root_node, self.tree_stats, cloned_env_)
+            self._backpropagate(tree_path, end_value, winner, self.tree_stats)
+            next_board_value = [child.value() for child in self.root_node.children.values()]
+            if n % 1000 == 0:
+                print(f"Done with {n}/{self.config.num_simulations} simulations.")
+                next_board_value_np = np.array(next_board_value).reshape(env.game.board.size)
+                self.logger.log_array("next_board_value", next_board_value_np)
 
-            for ix, future in enumerate(cf.as_completed(futures)):
-                tree_path, end_value = future.result()
-                self._backpropagate(tree_path, end_value, starting_player, self.tree_stats)
-                n_sim = (ix + 1)
-                if n_sim % 100 == 0:
-                    print(f"Done with {n_sim}/{self.config.num_simulations} simulations.")
+            metrics = self.rollout_metrics.copy()
+            metrics.update({
+                "max_next_board_value": max(next_board_value),
+                "min_next_board_value": min(next_board_value),
+                "mean_next_board_value": np.mean(next_board_value),
+            })
+            self.logger.log(metrics)
 
         # once the simulation is done, return best Move
         best_action, _ = self.select_children(self.root_node, self.tree_stats)
@@ -151,9 +193,11 @@ class MCTS:
 
         return Move(player=starting_player, position=GridPosition.from_int(best_action, board_size=env.game.board.size))
 
-    def _backpropagate(self, tree_path: list[TreeNode], end_value: float, player: PlayerEnum, tree_stats: TreeStats):
+    def _backpropagate(
+        self, tree_path: list[TreeNode], end_value: float, winner: PlayerEnum | None, tree_stats: TreeStats
+    ):
         for node in tree_path:
-            node.value_sum += end_value if node.to_play == player else -end_value
+            node.value_sum += end_value if node.to_play == winner else -end_value
             node.visit_count += 1
             tree_stats.update(node.value())
 
@@ -171,7 +215,7 @@ class MCTS:
         prior_score = self.config.ct * node.prior * np.sqrt(parent_visit_count) / (1 + node.visit_count)
         if node.visit_count == 0:
             return prior_score
-        return prior_score + node.value()
+        return prior_score + tree_stats.normalise(node.value())
 
     def _compute_ucb_score_muzero(self, node: TreeNode, parent_visit_count: int, tree_stats: TreeStats) -> float:
         """Compute the UCB score for a node using the Muzero formula (B.2) in https://arxiv.org/pdf/1911.08265."""
@@ -206,29 +250,6 @@ class MCTS:
 
         if store_plot:
             plt.savefig(plot_filename)
-            print(f"Stored heatmap of policy in {os.getcwd()}/{plot_filename}")
+            print(f"Stored heatmap of policy in {os.getcwd()}/{plot_filename}_{time.time()}")
 
         plt.show()
-
-
-if __name__ == "__main__":
-    from evaluators.sparse_evaluator import SparseEvaluator
-    from rl_env.env import GomokuEnv
-
-    config = MCTSConfig()
-    config.num_simulations = 100_000
-    mcts = MCTS(mcts_config=config)
-    evaluator = SparseEvaluator()
-    env = GomokuEnv(board_evaluator=SparseEvaluator(), board_size=5)
-    env.reset()
-
-    best_move = mcts.run(env, visualise_policy=True)
-    import pickle
-    with open("mcts.pkl", "wb") as f:
-        pickle.dump(mcts, f)
-    print(best_move)
-    # import pickle
-    # mcts = pickle.load(open("mcts.pkl", "rb"))
-    # import pdb
-    # pdb.set_trace()
-    # mcts.root_node

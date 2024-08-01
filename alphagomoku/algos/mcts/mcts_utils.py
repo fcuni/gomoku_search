@@ -8,16 +8,16 @@ from game.gomoku_utils import PlayerEnum
 class TreeStats:
     """Node statistics, including the maximum and mininum values in the tree."""
     maximum: float = -np.inf
-    mininum: float = np.inf
+    minimum: float = np.inf
 
     def update(self, value: float):
         self.maximum = max(self.maximum, value)
-        self.mininum = min(self.mininum, value)
+        self.minimum = min(self.minimum, value)
 
     def normalise(self, value: float):
         """Normalise the value between 0 and 1. Only normalise if the maximum and mininum has been set."""
-        if self.maximum > self.mininum:
-            return (value - self.mininum) / (self.maximum - self.mininum)
+        if self.maximum > self.minimum:
+            return (value - self.minimum) / (self.maximum - self.minimum)
         return value
 
 
@@ -37,8 +37,6 @@ class TreeNode:
     # extra info to use with neural networks
     hidden_state: np.ndarray | None = None
     """Hidden state of the node."""
-    reward: float = 0.0
-    """Reward of the node, in case a value function is used."""
     @property
     def is_expanded(self) -> bool:
         return len(self.children) != 0
@@ -68,8 +66,8 @@ class TreeNode:
         if policy_logits is None:
             policy_logits = np.zeros(len(actions))
         norm_sum = np.sum(np.exp(policy_logits))
-        prior = {a: np.exp(policy_logits[ix]) / norm_sum for ix, a in enumerate(actions)}
-        self.children = {action: TreeNode(prior=prior[action]) for action in actions.tolist()}
+        probs = np.exp(policy_logits) / norm_sum
+        self.children = {action: TreeNode(prior=probs[ix]) for ix, action in enumerate(actions.tolist())}
 
     def add_exploration_noise(self, dirichlet_alpha: float, exploration_fraction: float):
         """In the root node, add Dirichlet noise to the prior of the children. This is the recipe used in the AlphaZero-like papers."""
