@@ -1,31 +1,10 @@
-# Generic Template
+Gomoku is a two-player game where the objective is to place five stones in a row. It is a particular example of a larger class of games called (m,n,k)-games, see here. In the most basic setup, Gomoku is played on a 15x15 (reduced) Go board, although play on a full 19x19 board is also common. Players take turns placing a stone of their colour (black or white) on an empty intersection. The winner is the first player to form an unbroken chain of five stones horizontally, vertically, or diagonally.
 
-This is a generic template for a repository. It is intended to be used as a starting 
-point for creating new repositories. It contains a number of files that are common to
-most repositories, such as a README, LICENSE, and a pyproject file.
 
-## Usage
+This repo contains a number of search algorithms applied to Gomoku. 
 
-To use this template, click the "Use this template" button at the top of the page.
 
-## Installation
+- search TODO list:
 
-### Linux
-
-It is convenient to make use of `pipx` to install general helper packages:
-
-```bash
-python -m venv $HOME/.venvs
-source $HOME/.venvs/bin/activate
-pip install pipx
-pipx install black
-pipx install isort
-pipx install ruff
-pipx install pre-commit
-```
-
-Use the Makefile to install the repo and its dependencies:
-
-```bash
-make setup
-```
+  * [x] Monte Carlo Tree Search
+  * [ ] Neural Networks
