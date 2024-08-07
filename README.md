@@ -7,4 +7,5 @@ This repo contains a number of search algorithms applied to Gomoku.
 - search TODO list:
 
   * [x] Monte Carlo Tree Search
-  * [ ] Neural Networks
+  * [ ] AlphaZero-like network
+  * [ ] MuZero-like network
